@@ -58,7 +58,6 @@ func askForAuthenticationMethod(options []string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error asking for authentication method: %v", err)
 	}
-	log.Debugf("selected auth: %v", selectedAuth)
 	return selectedAuth, nil
 }
 

@@ -1,11 +1,10 @@
 package main
 
 import (
-	"fmt"
-	"github.com/leflambeur/go-archivist/archivist"
-	"github.com/urfave/cli"
 	"log"
 	"os"
+
+	"github.com/urfave/cli"
 )
 
 func main() {
@@ -17,16 +16,20 @@ func main() {
 		Commands: []cli.Command{
 			{
 				Name:    "init",
-				Aliases: []string{"i}"},
-				Action: func(c *cli.context) error {
-					archivistInit, err := archivist.Init()
-					if err != nil {
-						return err
-					}
-					fmt.Println(archivistInit)
+				Aliases: []string{"i"},
+				Action: func(c *cli.Context) error {
+					//archivistInit, err := archivist.Init()
+					//if err != nil {
+					//	return err
+					//}
+					//fmt.Println(archivistInit)
 					return nil
 				},
 			},
 		},
+	}
+	err := app.Run(os.Args)
+	if err != nil {
+		log.Fatal(err)
 	}
 }
