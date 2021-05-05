@@ -10,17 +10,20 @@ import (
 const (
 	authTypeTLS    = "TLS"
 	authTypeSecret = "Client Secret"
+	///authTypeToken  = "Token"
 )
 
 type clientCredentials struct {
-	clientTenant string
-	clientID     string
-	clientSecret string
+	ClientTenant string
+	ClientID     string
+	ClientSecret string
 }
 
 type tlsPaths struct {
-	tlsCert string
-	tlsKey  string
+	ClientTenant string
+	ClientID     string
+	tlsCert      string
+	tlsKey       string
 }
 
 func validateURL(val interface{}) error {
@@ -47,11 +50,11 @@ func askForArchivistDetails() (string, error) {
 	return url, nil
 }
 
-func askForAuthenticationMethod(options []string) (string, error) {
+func askForAuthenticationMethod() (string, error) {
 	selectedAuth := ""
 	q := &survey.Select{
 		Message: "Select authentication method",
-		Options: options,
+		Options: []string{"Client Secret", "TLS"},
 		Help:    "Select either Client Secret or TLS authentication",
 	}
 	err := survey.AskOne(q, &selectedAuth, survey.WithValidator(survey.Required))
@@ -65,21 +68,21 @@ func askForClientSecretCredentials() (*clientCredentials, error) {
 	answers := clientCredentials{}
 	qs := []*survey.Question{
 		{
-			Name: "clientTenant",
+			Name: "ClientTenant",
 			Prompt: &survey.Input{
 				Message: "Enter your Azure Tenant",
 			},
 			Validate: survey.Required,
 		},
 		{
-			Name: "clientID",
+			Name: "ClientID",
 			Prompt: &survey.Input{
 				Message: "Enter your Client ID (API APP ID)",
 			},
 			Validate: survey.Required,
 		},
 		{
-			Name: "clientSecret",
+			Name: "ClientSecret",
 			Prompt: &survey.Password{
 				Message: "Enter your Client Secret (API APP Secret)",
 			},
@@ -95,6 +98,20 @@ func askForClientSecretCredentials() (*clientCredentials, error) {
 func askForTLSFiles() (*tlsPaths, error) {
 	answers := tlsPaths{}
 	qs := []*survey.Question{
+		{
+			Name: "ClientTenant",
+			Prompt: &survey.Input{
+				Message: "Enter your Azure Tenant",
+			},
+			Validate: survey.Required,
+		},
+		{
+			Name: "ClientID",
+			Prompt: &survey.Input{
+				Message: "Enter your Client ID (API APP ID)",
+			},
+			Validate: survey.Required,
+		},
 		{
 			Name: "tlsCert",
 			Prompt: &survey.Input{
