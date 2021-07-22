@@ -2,9 +2,11 @@ package archivist
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 )
 
@@ -16,8 +18,20 @@ const (
 
 type azureLoginResponse struct {
 	Token_type   string `json:"token_type"`
-	Expires_in   int    `json:"expires_in"`
+	Expires_in   string `json:"expires_in"`
 	Access_token string `json:"access_token"`
+}
+
+type Profiles struct {
+	Profile []Profile `json:"profiles"`
+}
+
+type Profile struct {
+	Profile_name  string `json:"name"`
+	Rkvst_url     string `json:"rkvst-url"`
+	Tenant_id     string `json:"tenant-id"`
+	Client_id     string `json:"client-id"`
+	Client_secret string `json:"client-secret"`
 }
 
 func ClientSecretLogin(archivistURL, ClientTenant, ClientID, ClientSecret string) (string, error) {
@@ -45,9 +59,10 @@ func generateAADClientToken(azureLoginURL, archivistURL, ClientID, ClientSecret 
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
+
 	tokenErr := json.Unmarshal(body, &tokenResponse)
 	if tokenErr != nil {
-		return "\nError Unmarshalling Token Response\n\n", err
+		return "\nError Unmarshalling Token Response\n\n", tokenErr
 	}
 
 	return tokenResponse.Access_token, err
@@ -78,18 +93,48 @@ func generateAADTLSToken(azureLoginURL, archivistURL, ClientID, tlsCert, tlsKey 
 	return tokenResponse.Access_token, err
 }
 
-func Init() (string, error) {
+func InitRead(filePath string, selectedProfile string) (string, error) {
+	jsonFile, err := os.Open(filePath)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer jsonFile.Close()
+	byteValue, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		return "Failed to read file", err
+	}
+	var profiles Profiles
+	json.Unmarshal(byteValue, &profiles)
+	for _, i := range profiles.Profile {
+		if i.Profile_name == selectedProfile {
+			archivistURL := i.Rkvst_url
+			clientTenant := i.Tenant_id
+			clientID := i.Client_id
+			clientSecret := i.Client_secret
+			token, err := ClientSecretLogin(archivistURL, clientTenant, clientID, clientSecret)
+			if err != nil {
+				return "\nError Generating Token\n\n", err
+			}
+			return token, err
+		}
+	}
+	return "Failed to Read Profile", err
+}
+
+func InitAsk(selectedAuth string) (string, error) {
 	archivistURL, err := askForArchivistDetails()
 	if err != nil {
 		return "\nError Validating URL\n\n", err
 	}
-
-	selectedAuth, err := askForAuthenticationMethod()
-	if err != nil {
-		return "\nError Choosing Auth\n\n", err
+	if selectedAuth == "" {
+		selectedAuth, err = askForAuthenticationMethod()
+		if err != nil {
+			return "\nError Choosing Auth\n\n", err
+		}
 	}
+	selectedAuth = fmt.Sprintf("%v", selectedAuth)
 	switch selectedAuth {
-	case authTypeSecret:
+	case "authTypeSecret":
 		credentials, err := askForClientSecretCredentials()
 		if err != nil {
 			return "\nError Entering Credentials\n\n", err
@@ -99,7 +144,7 @@ func Init() (string, error) {
 			return "\nError Generating Token\n\n", err
 		}
 		return token, err
-	case authTypeTLS:
+	case "authTypeTLS":
 		credentials, err := askForTLSFiles()
 		if err != nil {
 			return "\nError Entering TLS Paths\n\n", err
@@ -108,6 +153,7 @@ func Init() (string, error) {
 		if err != nil {
 			return "\nError Generating Token\n\n", err
 		}
+		ValidateToken(token)
 		return token, err
 	}
 	return "\nShouldn't be here\n\n", err
